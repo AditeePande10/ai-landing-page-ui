@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude — Think Deeper</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --cream: #F5F0E8;
+    --warm-white: #FDFAF5;
+    --ink: #1A1510;
+    --rust: #C4622D;
+    --gold: #B8922A;
+    --muted: #7A6F62;
+    --border: rgba(26,21,16,0.12);
+    --glow: rgba(196,98,45,0.15);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--warm-white);
+    color: var(--ink);
+    font-family: 'Cormorant Garamond', serif;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    width: 8px; height: 8px;
+    background: var(--rust);
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: width 0.2s, height 0.2s, background 0.2s;
+    mix-blend-mode: multiply;
+  }
+  .cursor-ring {
+    width: 32px; height: 32px;
+    border: 1px solid var(--rust);
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: transform 0.1s ease-out, width 0.3s, height 0.3s;
+    opacity: 0.6;
+  }
+  body:hover .cursor { opacity: 1; }
+  a:hover ~ .cursor, button:hover ~ .cursor { width: 16px; height: 16px; }
+
+  /* Noise texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 28px 60px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.4s, background 0.4s;
+  }
+  nav.scrolled {
+    border-color: var(--border);
+    background: rgba(253,250,245,0.92);
+    backdrop-filter: blur(12px);
+  }
+  .nav-logo {
+    font-size: 22px;
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .nav-logo span { color: var(--rust); }
+  .nav-links {
+    display: flex; gap: 48px; list-style: none;
+  }
+  .nav-links a {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: color 0.2s;
+    position: relative;
+  }
+  .nav-links a::after {
+    content: '';
+    position: absolute; bottom: -2px; left: 0; right: 0;
+    height: 1px; background: var(--rust);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform 0.3s;
+  }
+  .nav-links a:hover { color: var(--ink); }
+  .nav-links a:hover::after { transform: scaleX(1); }
+  .nav-cta {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 10px 24px;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    cursor: none;
+    transition: background 0.25s, color 0.25s;
+    text-decoration: none;
+  }
+  .nav-cta:hover { background: var(--ink); color: var(--warm-white); }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-left {
+    padding: 180px 60px 80px;
+    display: flex; flex-direction: column; justify-content: center;
+    position: relative; z-index: 2;
+  }
+
+  .hero-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--rust);
+    margin-bottom: 32px;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.2s forwards;
+  }
+
+  .hero-title {
+    font-size: clamp(64px, 6vw, 96px);
+    font-weight: 300;
+    line-height: 1.0;
+    letter-spacing: -0.02em;
+    margin-bottom: 40px;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.4s forwards;
+  }
+  .hero-title em {
+    font-style: italic;
+    color: var(--rust);
+  }
+  .hero-title .line-2 {
+    display: block;
+    padding-left: 80px;
+  }
+
+  .hero-desc {
+    font-size: 20px;
+    font-weight: 300;
+    line-height: 1.7;
+    color: var(--muted);
+    max-width: 420px;
+    margin-bottom: 56px;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.6s forwards;
+  }
+
+  .hero-actions {
+    display: flex; align-items: center; gap: 32px;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.8s forwards;
+  }
+
+  .btn-primary {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 16px 40px;
+    background: var(--rust);
+    color: var(--warm-white);
+    border: none; cursor: none;
+    text-decoration: none;
+    position: relative; overflow: hidden;
+    transition: transform 0.2s;
+    display: inline-block;
+  }
+  .btn-primary::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: var(--gold);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  .btn-primary:hover { transform: translateY(-2px); }
+  .btn-primary:hover::before { transform: translateX(0); }
+  .btn-primary span { position: relative; z-index: 1; }
+
+  .btn-ghost {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    display: flex; align-items: center; gap: 10px;
+    transition: color 0.2s;
+  }
+  .btn-ghost:hover { color: var(--ink); }
+  .btn-ghost svg { transition: transform 0.2s; }
+  .btn-ghost:hover svg { transform: translateX(4px); }
+
+  .hero-right {
+    position: relative; overflow: hidden;
+    background: var(--cream);
+  }
+  .hero-right::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 60% 40%, var(--glow) 0%, transparent 70%);
+  }
+
+  /* Animated chat bubbles */
+  .chat-scene {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    justify-content: center; padding: 80px 60px;
+    gap: 20px;
+  }
+  .bubble {
+    max-width: 340px;
+    padding: 18px 24px;
+    font-size: 16px;
+    font-weight: 300;
+    line-height: 1.6;
+    border-radius: 2px;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: bubbleIn 0.6s forwards;
+  }
+  .bubble.user {
+    background: var(--ink); color: var(--warm-white);
+    align-self: flex-end;
+    animation-delay: 1.2s;
+  }
+  .bubble.assistant {
+    background: var(--warm-white);
+    border: 1px solid var(--border);
+    align-self: flex-start;
+    box-shadow: 0 4px 24px rgba(26,21,16,0.06);
+  }
+  .bubble.assistant.b2 { animation-delay: 1.8s; }
+  .bubble.user.u2 { animation-delay: 2.6s; }
+  .bubble.assistant.b3 { animation-delay: 3.2s; max-width: 380px; }
+  .bubble-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .bubble.user .bubble-label { text-align: right; color: rgba(253,250,245,0.5); }
+  .highlight-word { color: var(--rust); }
+  .cursor-blink {
+    display: inline-block;
+    width: 2px; height: 1em;
+    background: var(--rust);
+    vertical-align: text-bottom;
+    animation: blink 1s infinite;
+    margin-left: 2px;
+  }
+
+  /* Scrolling marquee */
+  .marquee-strip {
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 0;
+    overflow: hidden;
+    background: var(--cream);
+    position: relative; z-index: 2;
+  }
+  .marquee-inner {
+    display: flex; gap: 0;
+    animation: marquee 30s linear infinite;
+    white-space: nowrap;
+  }
+  .marquee-item {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 48px;
+    display: flex; align-items: center; gap: 48px;
+  }
+  .marquee-item::after {
+    content: '·';
+    color: var(--rust);
+    font-size: 18px;
+  }
+
+  /* FEATURES */
+  .features {
+    padding: 160px 60px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .section-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    margin-bottom: 100px;
+    align-items: end;
+  }
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--rust);
+    margin-bottom: 24px;
+  }
+  .section-title {
+    font-size: clamp(40px, 4vw, 60px);
+    font-weight: 300;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+  .section-title em { font-style: italic; }
+  .section-desc {
+    font-size: 18px;
+    font-weight: 300;
+    line-height: 1.8;
+    color: var(--muted);
+    align-self: end;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+  .feature-card {
+    background: var(--warm-white);
+    padding: 52px 44px;
+    transition: background 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .feature-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 2px; background: var(--rust);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform 0.4s;
+  }
+  .feature-card:hover { background: var(--cream); }
+  .feature-card:hover::before { transform: scaleX(1); }
+  .feature-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--rust);
+    margin-bottom: 32px;
+  }
+  .feature-icon {
+    font-size: 32px; margin-bottom: 20px;
+    line-height: 1;
+  }
+  .feature-title {
+    font-size: 26px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    margin-bottom: 16px;
+  }
+  .feature-desc {
+    font-size: 16px;
+    font-weight: 300;
+    line-height: 1.75;
+    color: var(--muted);
+  }
+
+  /* QUOTE SECTION */
+  .quote-section {
+    background: var(--ink);
+    padding: 140px 60px;
+    text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .quote-section::before {
+    content: '"';
+    position: absolute;
+    font-size: 600px;
+    font-family: 'Cormorant Garamond', serif;
+    color: rgba(255,255,255,0.02);
+    top: -100px; left: -40px;
+    line-height: 1;
+    pointer-events: none;
+  }
+  .quote-text {
+    font-size: clamp(32px, 4vw, 56px);
+    font-weight: 300;
+    font-style: italic;
+    color: var(--warm-white);
+    max-width: 860px;
+    margin: 0 auto 48px;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    position: relative; z-index: 1;
+  }
+  .quote-text em { color: var(--rust); font-style: normal; }
+  .quote-attr {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(245,240,232,0.4);
+  }
+
+  /* MODELS */
+  .models-section {
+    padding: 160px 60px;
+    max-width: 1400px; margin: 0 auto;
+  }
+  .models-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-top: 80px;
+  }
+  .model-card {
+    border: 1px solid var(--border);
+    padding: 48px 40px;
+    position: relative;
+    transition: border-color 0.3s, transform 0.3s;
+    background: var(--warm-white);
+  }
+  .model-card.featured {
+    border-color: var(--rust);
+    background: var(--cream);
+  }
+  .model-card:hover { transform: translateY(-4px); border-color: var(--rust); }
+  .model-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border: 1px solid currentColor;
+    display: inline-block; margin-bottom: 32px;
+  }
+  .model-card.featured .model-badge { color: var(--rust); }
+  .model-name {
+    font-size: 36px;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+  .model-name span { font-style: italic; color: var(--rust); }
+  .model-tagline {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 28px;
+  }
+  .model-desc {
+    font-size: 16px;
+    font-weight: 300;
+    line-height: 1.75;
+    color: var(--muted);
+    margin-bottom: 36px;
+  }
+  .model-link {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--rust);
+    text-decoration: none;
+    display: flex; align-items: center; gap: 8px;
+    transition: gap 0.2s;
+  }
+  .model-link:hover { gap: 16px; }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 60px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 40px;
+  }
+  .footer-brand {
+    font-size: 20px; font-weight: 300;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .footer-brand span { color: var(--rust); }
+  .footer-copy {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+  .footer-links {
+    display: flex; gap: 40px; list-style: none;
+  }
+  .footer-links a {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .footer-links a:hover { color: var(--rust); }
+
+  /* CTA SECTION */
+  .cta-section {
+    padding: 120px 60px;
+    background: var(--cream);
+    border-top: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center;
+  }
+  .cta-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--rust);
+    margin-bottom: 32px;
+  }
+  .cta-title {
+    font-size: clamp(48px, 5vw, 80px);
+    font-weight: 300;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin-bottom: 48px;
+  }
+  .cta-title em { font-style: italic; color: var(--rust); }
+  .cta-actions { display: flex; gap: 20px; align-items: center; }
+
+  /* KEYFRAMES */
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(28px); }
+  }
+  @keyframes bubbleIn {
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  /* Scroll reveal */
+  .reveal {
+    opacity: 0; transform: translateY(32px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+  .reveal-delay-1 { transition-delay: 0.1s; }
+  .reveal-delay-2 { transition-delay: 0.2s; }
+  .reveal-delay-3 { transition-delay: 0.3s; }
+  .reveal-delay-4 { transition-delay: 0.4s; }
+  .reveal-delay-5 { transition-delay: 0.5s; }
+
+  @media (max-width: 900px) {
+    nav { padding: 20px 24px; }
+    .nav-links { display: none; }
+    .hero { grid-template-columns: 1fr; min-height: auto; }
+    .hero-left { padding: 120px 24px 60px; }
+    .hero-right { height: 50vh; }
+    .features { padding: 80px 24px; }
+    .features-grid, .models-grid { grid-template-columns: 1fr; }
+    .section-header { grid-template-columns: 1fr; gap: 24px; }
+    footer { grid-template-columns: 1fr; }
+    .footer-links { flex-wrap: wrap; gap: 20px; }
+    .models-section { padding: 80px 24px; }
+    .cta-section { padding: 80px 24px; }
+    .quote-section { padding: 80px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav id="navbar">
+  <a href="#" class="nav-logo">Cl<span>a</span>ude</a>
+  <ul class="nav-links">
+    <li><a href="#features">Capabilities</a></li>
+    <li><a href="#models">Models</a></li>
+    <li><a href="#api">API</a></li>
+    <li><a href="#research">Research</a></li>
+  </ul>
+  <a href="#" class="nav-cta">Try Claude →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <p class="hero-eyebrow">By Anthropic — AI for the long term</p>
+    <h1 class="hero-title">
+      An AI that<br>
+      <em>thinks</em><span class="line-2">with you</span>
+    </h1>
+    <p class="hero-desc">Claude is a next-generation AI assistant — brilliant, honest, and built to be genuinely helpful. Not just a tool. A collaborator.</p>
+    <div class="hero-actions">
+      <a href="#" class="btn-primary"><span>Start for free</span></a>
+      <a href="#" class="btn-ghost">
+        Explore models
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="chat-scene">
+      <div class="bubble user">
+        <div class="bubble-label">You</div>
+        Explain quantum entanglement like I'm curious but not a physicist.
+      </div>
+      <div class="bubble assistant b2">
+        <div class="bubble-label">Claude</div>
+        Imagine two coins flipped simultaneously — no matter how far apart, when one lands heads, the other <span class="highlight-word">instantly</span> lands tails. Einstein called it "spooky action at a distance."<span class="cursor-blink"></span>
+      </div>
+      <div class="bubble user u2">
+        <div class="bubble-label">You</div>
+        Can we use this for faster-than-light communication?
+      </div>
+      <div class="bubble assistant b3">
+        <div class="bubble-label">Claude</div>
+        Beautifully clever question — but no. The correlation exists, yet you can't <span class="highlight-word">control</span> which result appears, so no message can travel. Nature closes the loophole.<span class="cursor-blink"></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-strip">
+  <div class="marquee-inner">
+    <span class="marquee-item">Writing & Editing</span>
+    <span class="marquee-item">Code Generation</span>
+    <span class="marquee-item">Data Analysis</span>
+    <span class="marquee-item">Research Synthesis</span>
+    <span class="marquee-item">Creative Projects</span>
+    <span class="marquee-item">Strategic Thinking</span>
+    <span class="marquee-item">Mathematical Reasoning</span>
+    <span class="marquee-item">Document Review</span>
+    <span class="marquee-item">Writing & Editing</span>
+    <span class="marquee-item">Code Generation</span>
+    <span class="marquee-item">Data Analysis</span>
+    <span class="marquee-item">Research Synthesis</span>
+    <span class="marquee-item">Creative Projects</span>
+    <span class="marquee-item">Strategic Thinking</span>
+    <span class="marquee-item">Mathematical Reasoning</span>
+    <span class="marquee-item">Document Review</span>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="section-header reveal">
+    <div>
+      <p class="section-label">Core Capabilities</p>
+      <h2 class="section-title">Built for<br><em>real work</em></h2>
+    </div>
+    <p class="section-desc">Claude isn't designed to impress you in a demo. It's designed to be useful when the stakes are real — when you need precision, honesty, and depth.</p>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-card reveal reveal-delay-1">
+      <div class="feature-num">01</div>
+      <div class="feature-icon">◈</div>
+      <h3 class="feature-title">Deep Reasoning</h3>
+      <p class="feature-desc">Claude thinks through complex problems step by step — logic, mathematics, science — with the rigor of an expert and the clarity of a great teacher.</p>
+    </div>
+    <div class="feature-card reveal reveal-delay-2">
+      <div class="feature-num">02</div>
+      <div class="feature-icon">⌘</div>
+      <h3 class="feature-title">Code & Engineering</h3>
+      <p class="feature-desc">Write, debug, and review code across dozens of languages. Understands architecture, not just syntax. Explains what it does and why.</p>
+    </div>
+    <div class="feature-card reveal reveal-delay-3">
+      <div class="feature-num">03</div>
+      <div class="feature-icon">✦</div>
+      <h3 class="feature-title">Creative Craft</h3>
+      <p class="feature-desc">Prose, poetry, scripts, and strategy. Claude has taste — it knows when to be spare, when to be lush, and when your brief needs rethinking.</p>
+    </div>
+    <div class="feature-card reveal reveal-delay-2">
+      <div class="feature-num">04</div>
+      <div class="feature-icon">⊕</div>
+      <h3 class="feature-title">Research & Analysis</h3>
+      <p class="feature-desc">Synthesize large documents, compare sources, extract insights. Claude reads with comprehension — not just keyword matching.</p>
+    </div>
+    <div class="feature-card reveal reveal-delay-3">
+      <div class="feature-num">05</div>
+      <div class="feature-icon">◎</div>
+      <h3 class="feature-title">Constitutional AI</h3>
+      <p class="feature-desc">Trained to be helpful, harmless, and honest. Claude will tell you when it's uncertain, push back when warranted, and decline when it should.</p>
+    </div>
+    <div class="feature-card reveal reveal-delay-4">
+      <div class="feature-num">06</div>
+      <div class="feature-icon">⬡</div>
+      <h3 class="feature-title">Long Context</h3>
+      <p class="feature-desc">Ingest entire codebases, books, or legal documents. Claude maintains coherence across hundreds of thousands of tokens without losing the thread.</p>
+    </div>
+  </div>
+</section>
+
+<!-- QUOTE -->
+<section class="quote-section">
+  <p class="quote-text reveal">"We want AI to be genuinely <em>good for humanity</em> — not just commercially successful. Those goals should be the same thing."</p>
+  <p class="quote-attr reveal">— Dario Amodei, CEO, Anthropic</p>
+</section>
+
+<!-- MODELS -->
+<section class="models-section" id="models">
+  <div class="section-header reveal">
+    <div>
+      <p class="section-label">Model Family</p>
+      <h2 class="section-title">Three tiers.<br><em>One character.</em></h2>
+    </div>
+    <p class="section-desc">Every Claude model is built on the same values and trained with the same care. Choose the capability level your task demands.</p>
+  </div>
+
+  <div class="models-grid">
+    <div class="model-card reveal reveal-delay-1">
+      <div class="model-badge">Fast</div>
+      <h3 class="model-name">Claude <span>Haiku</span></h3>
+      <p class="model-tagline">Speed · Efficiency · Scale</p>
+      <p class="model-desc">Compact and fast — built for high-volume tasks where response latency matters. Perfect for customer-facing applications and real-time use cases.</p>
+      <a href="#" class="model-link">Learn more →</a>
+    </div>
+    <div class="model-card featured reveal reveal-delay-2">
+      <div class="model-badge">Balanced</div>
+      <h3 class="model-name">Claude <span>Sonnet</span></h3>
+      <p class="model-tagline">Intelligence · Versatility · Value</p>
+      <p class="model-desc">The sweet spot. Powerful enough for sophisticated tasks, fast enough for production. The model most teams reach for first.</p>
+      <a href="#" class="model-link">Learn more →</a>
+    </div>
+    <div class="model-card reveal reveal-delay-3">
+      <div class="model-badge">Frontier</div>
+      <h3 class="model-name">Claude <span>Opus</span></h3>
+      <p class="model-tagline">Depth · Nuance · Mastery</p>
+      <p class="model-desc">Maximum intelligence for the hardest problems. Expert-level reasoning, nuanced analysis, and creative work that requires genuine understanding.</p>
+      <a href="#" class="model-link">Learn more →</a>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <p class="cta-label reveal">Begin today</p>
+  <h2 class="cta-title reveal">Start <em>thinking</em><br>differently</h2>
+  <div class="cta-actions reveal">
+    <a href="#" class="btn-primary"><span>Try Claude free</span></a>
+    <a href="#" class="btn-ghost">
+      View API docs
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div>
+    <div class="footer-brand">Cl<span>a</span>ude</div>
+    <p class="footer-copy">© 2026 Anthropic, PBC. AI safety through research.</p>
+  </div>
+  <ul class="footer-links">
+    <li><a href="#">Privacy</a></li>
+    <li><a href="#">Terms</a></li>
+    <li><a href="#">Research</a></li>
+    <li><a href="#">Careers</a></li>
+    <li><a href="#">API</a></li>
+  </ul>
+</footer>
+
+<script>
+  // Custom cursor
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+  document.addEventListener('mousemove', e => {
+    mx = e.clientX; my = e.clientY;
+    cursor.style.left = mx + 'px';
+    cursor.style.top = my + 'px';
+  });
+  (function animate() {
+    rx += (mx - rx) * 0.12;
+    ry += (my - ry) *.12;
+    ring.style.left = rx + 'px';
+    ring.style.top = ry + 'px';
+    requestAnimationFrame(animate);
+  })();
+  document.querySelectorAll('a, button').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      cursor.style.transform = 'translate(-50%,-50%) scale(2)';
+      ring.style.opacity = '0';
+    });
+    el.addEventListener('mouseleave', () => {
+      cursor.style.transform = 'translate(-50%,-50%) scale(1)';
+      ring.style.opacity = '0.6';
+    });
+  });
+
+  // Navbar scroll
+  const navbar = document.getElementById('navbar');
+  window.addEventListener('scroll', () => {
+    navbar.classList.toggle('scrolled', window.scrollY > 60);
+  });
+
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  reveals.forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
